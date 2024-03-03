@@ -24,7 +24,7 @@ Based on MQTT and ROS, the schema is designed to be as simple as possible while 
   "type": "debug", // Direct exposure of the microcontroller's state (peripherals and internal)
   "data": string, // I.e. __FILE__ __LINE__ __FUNCTION__ "message"
 } | {
-  "type": "telemetry",  // User-friendly representation of the microcontroller's peripheral state (sensor)
+  "type": "event",  // User-friendly representation of the microcontroller's peripheral state (sensor)
   "data": {
     [key: string]: number,  // Lookup by Class ID; value units are class-specific
   },
@@ -42,3 +42,6 @@ Based on MQTT and ROS, the schema is designed to be as simple as possible while 
   "type": "heartbeat", // No data, just a message to indicate that the microcontroller is still alive
 })
 ```
+
+## Labelling
+
