@@ -3,24 +3,26 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-unsigned long lastTxMicros = 0;
-// unsigned long lastTxMicros = 0; // For frame refresh
-// unsigned long lastRx = 0;
+unsigned long lastTx = 0;
+unsigned long lastRx = 0;
 
-// unsigned numBufferRx = 0;
+unsigned posBufferRx = 0;
+bool delimit = false;
 char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-JsonDocument docTx;
+char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+JsonDocument docTx, docRx;
 
 // NOTE THE NAMING CONVENTIONS USED HERE
 const __FlashStringHelper* parseType(const DebugJson::msgtype_t& type) {
   switch(type) {
-    case DebugJson::DEBUG_NONE: return F("info");
     case DebugJson::DEBUG_INFO: return F("debug");
     case DebugJson::DEBUG_WARN: return F("error");
     case DebugJson::DEBUG_ERROR: return F("fatal");
     case DebugJson::EVENT_TELEMETRY: return F("event");
     case DebugJson::EVENT_COMMAND: return F("command");
     case DebugJson::EVENT_CONFIGURATION: return F("config");
+    case DebugJson::EVENT_REVISION: return F("revision");
+    default: return F("info");
   }
   return nullptr;
 }
@@ -36,6 +38,7 @@ void printSerial(const char* buffer, size_t len, Stream& out) {
     out.write(buffer + pos, chunk);
     pos += chunk;
   }
+  lastTx = millis();
 }
 
 void printSerial(const __FlashStringHelper* buffer, size_t len, Stream& out) {
@@ -50,59 +53,79 @@ void printSerial(const __FlashStringHelper* buffer, size_t len, Stream& out) {
     out.write(c);
     pos ++;
   }
+  lastTx = millis();
 }
 
 void printSerial(const String& buffer, Stream& out) {
   printSerial(buffer.c_str(), buffer.length(), out);
 }
 
-// void DebugJson::update(debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config) {
-//   bool delimit = false;
-//   if(Serial.available() > 0) {
-//     char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-//     // memset(bufferRx, '\0', DEBUG_JSON_SIZE_DOC);
-//     while(Serial.available() > 0) {
-//       lastRx = millis();
-//       char c = Serial.read();
-//       if(c == '\n') {
-//         delimit = true;
-//         bufferRx[numBufferRx] = '\0';
-//         break;
-//       }
-//       bufferRx[numBufferRx] = c;
-//       numBufferRx++;
-//     }
-//     if(delimit){
-//       DeserializationError error = deserializeJson(docRx, bufferRx);
-//       if (error || docRx.isNull() || docRx["type"].isNull()) {
-//         DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Failed to parse JSON (")) + error.c_str() + ") '" + String(bufferRx) + '\'');
-//       } else {
-//         if(docRx["type"].isNull()) {
-//           DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Invalid JSON (ENOENT 'type') '")) + String(bufferRx) + "'");
-//         } else {
-//           String type = docRx["type"];
-//           if(type == String("command")) {
-//             // TODO: Command validation
-//             if(cb_commands != nullptr) cb_commands(docRx);
-//             else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback: 'Commands'")));
-//           } else if (type == String("config")) {
-//             // TODO: Config validation
-//             if(cb_config != nullptr) cb_config(docRx);
-//             else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Configuration'")));
-//           } else {
-//             DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback: '")) + String(type) + '\'');
-//           }
-//         }
-//       }
-//     }
-//   }
-// }
+void DebugJson::update(debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config) {
+  // Read to async global buffer
+  while(Serial.available() > 0) {
+    char c = Serial.read();
+    lastRx = millis();
+    if(c == '\n') {
+      delimit = true;
+      bufferRx[posBufferRx] = '\0';
+      // Serial.println(bufferRx);
+      break;
+    } else {
+      bufferRx[posBufferRx] = c;
+      posBufferRx++;
+    }
+  }
+  if(delimit){ // bufferRx[posBufferRx] == '\0'
+    if(posBufferRx == 0) {
+      delimit = false;
+      return;
+    }
+    docRx.clear();
+    DeserializationError error = deserializeJson(docRx, bufferRx, posBufferRx);
 
-// void DebugJson::fixedUpdate(unsigned long timestamp) {
-//   if((timestamp - lastTx) > DEBUG_JSON_HEARTBEAT) {
-//     DebugJson::heartbeat(timestamp);
-//   }
-// }
+    // unsigned i;
+    // for(i = 0; i < DEBUG_JSON_SIZE_DOC && bufferRx[i + posBufferRx] != '\0'; i++) {
+    //   bufferRx[i] = bufferRx[i + posBufferRx];
+    // }
+
+    // bufferRx[i] = '\0';
+    // posBufferRx = 0;
+
+    // Serial.println(docRx["type"].as<String>());
+
+    if (error || docRx.isNull()) {
+      DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Failed to parse JSON (")) + error.c_str() + ')');
+    } else {
+      delimit = false;
+      posBufferRx = 0;
+      if(docRx["type"].isNull() || !docRx["type"].is<String>() || docRx["type"].as<String>().length() == 0) {
+        DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Invalid JSON (ENOENT 'type')")));
+      } else {
+        String type = docRx["type"];
+        
+        if(type == String("command")) {
+          // TODO: Command validation
+          JsonObject data = docRx["data"];
+          if(cb_commands != nullptr) cb_commands(data);
+          else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Commands'")));
+        } else if (type == String("config")) {
+          // TODO: Config validation
+          JsonObject data = docRx["data"];
+          if(cb_config != nullptr) cb_config(data);
+          else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Configuration'")));
+        } else {
+          DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback '")) + String(type) + '\'');
+        }
+      }
+    }
+  }
+}
+
+void DebugJson::fixedUpdate(unsigned long timestamp) {
+  if((timestamp - lastTx) > DEBUG_JSON_HEARTBEAT) {
+    DebugJson::heartbeat(timestamp);
+  }
+}
 
 void DebugJson::jsonPrint(const __FlashStringHelper* msg, size_t len, Stream& out) {
   if(docTx.isNull() || docTx.overflowed() || !docTx.containsKey("type") || docTx["type"].isNull() || docTx["type"].as<String>().length() == 0) {
@@ -221,7 +244,7 @@ void DebugJson::jsonPrint(Stream& out) {
   bufferTx[n] = '\n';
 
   // Print in chunks based on Serial.availableForWrite()
-  printSerial(bufferTx, n, out);
+  printSerial(bufferTx, n+1, out);
 
   docTx.clear();
 }

@@ -11,9 +11,9 @@
 #endif
 #endif
 
-#define DEBUG_JSON_SIZE_DOC 256
+#define DEBUG_JSON_SIZE_DOC 128
 #define DEBUG_JSON_SIZE_BUFFER SERIAL_TX_BUFFER_SIZE
-#define DEBUG_JSON_HEARTBEAT 1000
+#define DEBUG_JSON_HEARTBEAT 5000
 #define DEBUG_JSON_REFRESH_MICROS 1000 // 1ms
 
 #define DEBUG_JSON_POSTPRINT_MICROS 100 // 1ms - Uncomment to add a delay after printing
@@ -58,14 +58,14 @@ namespace DebugJson {
 
   void heartbeat(unsigned long timestamp);
 
-  // typedef void (*debugjson_cb_config_t)(JsonDocument config);
-  // typedef void (*debugjson_cb_commands_t)(JsonDocument commands);
+  typedef void (*debugjson_cb_config_t)(JsonObject& config);
+  typedef void (*debugjson_cb_commands_t)(JsonObject& commands);
 
-  // void update(debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
-  // void fixedUpdate(unsigned long timestamp);
+  void update(debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
+  void fixedUpdate(unsigned long timestamp);
 };
 
-#define DEBUG_JSON(...) DebugJson::debug(DebugJson::DEBUG_NONE, __VA_ARGS__)
+// #define DEBUG_JSON(...) DebugJson::debug(DebugJson::DEBUG_NONE, __VA_ARGS__)
 // #define DEBUG_JSON(m, len)   DebugJson::debug(DebugJson::DEBUG_INFO, m, len)
 #define WARNING_JSON(...) DebugJson::debug(DebugJson::DEBUG_WARN, __VA_ARGS__)
 #define ERROR_JSON(...)   DebugJson::debug(DebugJson::DEBUG_ERROR, __VA_ARGS__)
