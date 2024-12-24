@@ -20,6 +20,9 @@
 #define DEBUG_JSON_POSTPRINT_MICROS 100 // 1ms - Uncomment to add a delay after printing
 // #define DEBUG_JSON_SRAM 1
 
+// #define DEBUG_JSON_MSG_SEP "; "
+#define DEBUG_JSON_MSG_SEP ""
+
 // #define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_INFO
 #define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_NONE
 
