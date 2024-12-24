@@ -7,13 +7,24 @@ unsigned long lastTx = 0;
 unsigned long lastRx = 0;
 
 unsigned posBufferRx = 0;
-bool delimit = false;
-char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-JsonDocument docTx, docRx;
+bool delimit = false; // TODO move to a class
+char DebugJson::bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+char DebugJson::bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+
+// char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+// char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+JsonDocument DebugJson::docTx;
+JsonDocument DebugJson::docRx;
+
+#ifdef DEBUG_SERIAL
+  DebugJson::DebugStream<DebugJson::DEBUG_NONE> DebugJsonBreakpoints(DEBUG_SERIAL);
+  DebugJson::DebugStream<DebugJson::DEBUG_INFO> DebugJsonOut(DEBUG_SERIAL); // I.e. non-error messages
+  DebugJson::DebugStream<DebugJson::DEBUG_WARN> DebugJsonWarning(DEBUG_SERIAL); // I.e. software glitch
+  DebugJson::DebugStream<DebugJson::DEBUG_ERROR> DebugJsonError(DEBUG_SERIAL); // I.e. hardware failure
+#endif
 
 // NOTE THE NAMING CONVENTIONS USED HERE
-const __FlashStringHelper* parseType(const DebugJson::msgtype_t& type) {
+const __FlashStringHelper* DebugJson::parseType(const DebugJson::msgtype_t& type) {
   switch(type) {
     case DebugJson::DEBUG_INFO: return F("debug");
     case DebugJson::DEBUG_WARN: return F("error");
@@ -27,48 +38,15 @@ const __FlashStringHelper* parseType(const DebugJson::msgtype_t& type) {
   return nullptr;
 }
 
-void printSerial(const char* buffer, size_t len, Stream& out) {
-  size_t pos = 0;
-  while(pos < len) {
-    size_t chunk = min(len - pos, (size_t)out.availableForWrite());
-    if(chunk == 0) {
-      out.flush();
-      continue;
-    }
-    out.write(buffer + pos, chunk);
-    pos += chunk;
-  }
-  lastTx = millis();
-}
-
-void printSerial(const __FlashStringHelper* buffer, size_t len, Stream& out) {
-  size_t pos = 0;
-  while(pos < len) {
-    size_t chunk = min(len - pos, (size_t)out.availableForWrite());
-    if(chunk == 0) {
-      out.flush();
-      continue;
-    }
-    char c = pgm_read_byte_near((unsigned int)buffer + pos);
-    out.write(c);
-    pos ++;
-  }
-  lastTx = millis();
-}
-
-void printSerial(const String& buffer, Stream& out) {
-  printSerial(buffer.c_str(), buffer.length(), out);
-}
-
-void DebugJson::update(debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config) {
+void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config) {
   // Read to async global buffer
-  while(Serial.available() > 0) {
-    char c = Serial.read();
+  while(serial.available() > 0) {
+    char c = serial.read();
     lastRx = millis();
     if(c == '\n') {
       delimit = true;
       bufferRx[posBufferRx] = '\0';
-      // Serial.println(bufferRx);
+      // serial.println(bufferRx);
       break;
     } else {
       bufferRx[posBufferRx] = c;
@@ -91,15 +69,24 @@ void DebugJson::update(debugjson_cb_commands_t cb_commands, debugjson_cb_config_
     // bufferRx[i] = '\0';
     // posBufferRx = 0;
 
-    // Serial.println(docRx["type"].as<String>());
+    // serial.println(docRx["type"].as<String>());
 
     if (error || docRx.isNull()) {
-      DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Failed to parse JSON (")) + error.c_str() + ')');
+      // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Failed to parse JSON (")) + error.c_str() + ')');
+      #ifdef DEBUG_SERIAL
+        String s = F("DJ: Failed to parse JSON (");
+        s += error.c_str();
+        s += ')';
+        DebugJsonWarning.println(s);
+      #endif
     } else {
       delimit = false;
       posBufferRx = 0;
       if(docRx["type"].isNull() || !docRx["type"].is<String>() || docRx["type"].as<String>().length() == 0) {
-        DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Invalid JSON (ENOENT 'type')")));
+        // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Invalid JSON (ENOENT 'type')")));
+        #ifdef DEBUG_SERIAL
+          DebugJsonWarning.println(F("DJ: Invalid JSON (ENOENT 'type')"));
+        #endif
       } else {
         String type = docRx["type"];
         
@@ -107,223 +94,87 @@ void DebugJson::update(debugjson_cb_commands_t cb_commands, debugjson_cb_config_
           // TODO: Command validation
           JsonObject data = docRx["data"];
           if(cb_commands != nullptr) cb_commands(data);
-          else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Commands'")));
+          // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Commands'")));
+          #ifdef DEBUG_SERIAL
+            DebugJsonWarning.println(F("DJ: No Callback 'Commands'"));
+          #endif
         } else if (type == String("config")) {
           // TODO: Config validation
           JsonObject data = docRx["data"];
           if(cb_config != nullptr) cb_config(data);
-          else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Configuration'")));
+          // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Configuration'")));
+          #ifdef DEBUG_SERIAL
+            DebugJsonWarning.println(F("DJ: No Callback 'Configuration'"));
+          #endif
         } else {
-          DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback '")) + String(type) + '\'');
+          // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback '")) + String(type) + '\'');
+          #ifdef DEBUG_SERIAL
+            String msg = F("DJ: No Callback '");
+            msg += type;
+            msg += '\'';
+            DebugJsonWarning.println(msg);
+          #endif
         }
       }
     }
   }
 }
 
-void DebugJson::fixedUpdate(unsigned long timestamp) {
+void DebugJson::fixedUpdate(unsigned long timestamp, Stream& serial) {
   if((timestamp - lastTx) > DEBUG_JSON_HEARTBEAT) {
-    DebugJson::heartbeat(timestamp);
+    DebugJson::heartbeat(timestamp, serial);
   }
 }
 
-void DebugJson::jsonPrint(const __FlashStringHelper* msg, size_t len, Stream& out) {
-  if(docTx.isNull() || docTx.overflowed() || !docTx.containsKey("type") || docTx["type"].isNull() || docTx["type"].as<String>().length() == 0) {
-    // out.println('~');
-    docTx.clear();
-    // docTx.shrinkToFit();
-    return; // Misfire
-  }
-
-  if(msg == nullptr || len == 0 || docTx.containsKey("msg")) {
-    jsonPrint(out);
-    return;
-  }
-
-  // char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-  memset(bufferTx, '\0', DEBUG_JSON_SIZE_DOC);
-  size_t n = serializeJson(docTx, bufferTx);
-  docTx.clear();
+size_t DebugJson::jsonPrintln(Stream& out) {
+  size_t n = jsonPrint(out);
   if(n == 0) {
-    return; // Misfire
+    return 0; // Misfire
   }
-
-  // Find last closing brace
-  char* p = bufferTx + n;
-  while(p > bufferTx && *p != '}') p--;
-  if(p > bufferTx) {
-    *p = ','; // Replace with comma, retain null-termination
-    // *(p+1) = '\0'; // Null-terminate (just in case)
-
-    printSerial(bufferTx, p - bufferTx + 1, out);
-    printSerial(F("\"msg\":\""), 7, out);
-    printSerial(msg, len, out);
-    printSerial(F("\"}\n"), 3, out);
-  } else {
-    printSerial(bufferTx, n, out);
-  }
+  out.println();
+  
+  return n+1;
 }
-void DebugJson::jsonPrint(const char* msg, size_t len, Stream& out) {
-  if(docTx.isNull() || docTx.overflowed() || !docTx.containsKey("type") || docTx["type"].isNull() || docTx["type"].as<String>().length() == 0) {
-    // out.println('~');
-    docTx.clear();
-    // docTx.shrinkToFit();
-    return; // Misfire
-  }
 
-  if(msg == nullptr || len == 0 || docTx.containsKey("msg")) {
-    jsonPrint(out);
-    return;
-  }
-
-  // char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-  memset(bufferTx, '\0', DEBUG_JSON_SIZE_DOC);
-  size_t n = serializeJson(docTx, bufferTx);
-  docTx.clear();
+size_t DebugJson::jsonPrint(Stream& out) {
+  size_t n = serializeJson(docTx, out);
   if(n == 0) {
-    return; // Misfire
+    return 0; // Misfire
   }
-
-  // Find last closing brace
-  char* p = bufferTx + n;
-  while(p > bufferTx && *p != '}') p--;
-  if(p > bufferTx) {
-    *p = ','; // Replace with comma, retain null-termination
-    *(p+1) = '\0'; // Null-terminate (just in case)
-
-    printSerial(bufferTx, p - bufferTx + 1, out);
-    printSerial(F("\"msg\":\""), 7, out);
-    printSerial(msg, len, out);
-    printSerial(F("\"}\n"), 3, out);
-  } else {
-    printSerial(bufferTx, n, out);
-  }
+  lastTx = millis();
+  
+  docTx.clear();
+  return n;
 }
 
-void DebugJson::jsonPrint(const String& msg, Stream& out) {
-  jsonPrint(msg.c_str(), msg.length(), out);
-}
-
-void DebugJson::jsonPrint(unsigned long timestamp, const String& msg, Stream& out) { 
-  docTx["timestamp"] = timestamp;
-  jsonPrint(msg, out);
-}
-
-void DebugJson::jsonPrint(unsigned long timestamp, const __FlashStringHelper* msg, size_t len, Stream& out) { 
-  docTx["timestamp"] = timestamp;
-  jsonPrint(msg, len, out);
-}
-
-void DebugJson::jsonPrint(unsigned long timestamp, const char* msg, size_t len, Stream& out) { 
-  docTx["timestamp"] = timestamp;
-  jsonPrint(msg, len, out);
-}
-
-void DebugJson::jsonPrint(unsigned long timestamp, Stream& out) {
-  docTx["timestamp"] = timestamp;
-  jsonPrint(out);
-}
-
-void DebugJson::jsonPrint(Stream& out) {
-  if(docTx.isNull() || docTx.overflowed() || !docTx.containsKey("type") || docTx["type"].isNull() || docTx["type"].as<String>().length() == 0) {
-    // out.println('~');
+void DebugJson::revision(const uint8_t& version, Stream& out) {
+  // if(!docTx.isNull()) {
+    // jsonPrintln(out);
     docTx.clear();
-    // docTx.shrinkToFit();
-    return; // Misfire
-  }
-
-  // char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' }; // LOCAL BUFFER BREAKS THE FUNCTION AND THE WHOLE PROGRAM WITH IT DO NOT UNCOMMENT THIS LINE
-  memset(bufferTx, '\0', DEBUG_JSON_SIZE_DOC);
-  size_t n = serializeJson(docTx, bufferTx);
-  docTx.clear();
-  if(n == 0) {
-    return; // Misfire
-  }
-
-  // Append newline and null-terminate
-  bufferTx[n] = '\n';
-
-  // Print in chunks based on Serial.availableForWrite()
-  printSerial(bufferTx, n+1, out);
-
-  docTx.clear();
-}
-
-int freeRam() {
-  extern int __heap_start,*__brkval;
-  int v;
-  return (int)&v - (__brkval == 0  
-    ? (int)&__heap_start : (int) __brkval);  
-}
-
-void DebugJson::debug(const String& msg) { debug(DEBUG_NONE, msg); }
-void DebugJson::debug(const char* msg, size_t len) { debug(DEBUG_NONE, msg, len); }
-void DebugJson::debug(const __FlashStringHelper* msg, size_t len) { debug(DEBUG_NONE, msg, len); }
-
-void DebugJson::debug(const DebugJson::msgtype_t& type, const String& msg) { debug(type, msg.c_str(), msg.length()); }
-
-void DebugJson::debug(const DebugJson::msgtype_t& type, const __FlashStringHelper* msg, size_t len) {
-  if(type < DEBUG_JSON_LEVEL_MIN) return;
-  // JsonDocument docTx;
-  docTx["type"] = parseType(type);
-  docTx["timestamp"] = millis();
-  // if(msg.length() > 0) docTx["msg"] = msg;
-  #ifdef DEBUG_JSON_SRAM
-    docTx["data"]["sram"] = freeRam();
-  #endif
-  docTx.shrinkToFit();
-  jsonPrint(msg, len);
-}
-void DebugJson::debug(const DebugJson::msgtype_t& type, const char* msg, size_t len) {
-  if(type < DEBUG_JSON_LEVEL_MIN) return;
-  if(!docTx.isNull()) {
-    jsonPrint();
-  }
-  docTx.clear();
-  // JsonDocument docTx;
-  docTx["type"] = parseType(type);
-  docTx["timestamp"] = millis();
-  // if(msg.length() > 0) docTx["msg"] = msg;
-  #ifdef DEBUG_JSON_SRAM
-    docTx["data"]["sram"] = freeRam();
-  #endif
-  docTx.shrinkToFit();
-  jsonPrint(msg, len);
-  // Serial.print(F("{\"type\":\"")); Serial.print(parseType(type)); Serial.print(F("\",\"msg\":\"")); Serial.print(msg); Serial.println("\"}");
-}
-
-// template <typename T> void DebugJson::debugState(const msgtype_t& level, const T& state, const char* label, const char *msg) {
-//   JsonDocument doc;
-//   doc["level"] = level;
-//   doc[label] = state;
-//   if(msg != nullptr) doc["msg"] = msg;
-//   serializeJson(doc, buffer);
-// }
-
-void DebugJson::revision(const uint8_t& version) {
-  if(!docTx.isNull()) {
-    jsonPrint();
-    docTx.clear();
-  }
+  // }
   // JsonDocument docTx;
   docTx["type"] = parseType(EVENT_REVISION);
   docTx["data"] = version;
-  docTx.shrinkToFit();
-  jsonPrint();
+  // docTx.shrinkToFit();
+  jsonPrintln(out);
 }
 
 // Looks for [key: string]: number
-void DebugJson::telemetry(unsigned long timestamp, JsonObject& data) {
-  if(!docTx.isNull()) {
-    if(docTx["timestamp"].isNull()) jsonPrint(timestamp);
-    else jsonPrint();
+void DebugJson::telemetry(unsigned long timestamp, JsonObject data, Stream& out) {
+  // if(!docTx.isNull()) {
+    // if(docTx["timestamp"].isNull()) jsonPrint(timestamp, out);
+    // else{ 
+      // jsonPrint(out);
+    // }
     docTx.clear();
-  }
+  // }
   // JsonDocument docTx;
   docTx["type"] = parseType(EVENT_TELEMETRY);
   docTx["data"] = data;
-  docTx.shrinkToFit();
-  jsonPrint(timestamp);
+  docTx["timestamp"] = timestamp;
+  // docTx.shrinkToFit();
+  // jsonPrint(timestamp, out);
+  jsonPrintln(out);
 }
 
 // template <typename T> unsigned DebugJson::telemetry(unsigned long timestamp, String key, T value, bool send) {
@@ -347,27 +198,18 @@ void DebugJson::telemetry(unsigned long timestamp, JsonObject& data) {
 //   return count;
 // }
 
-template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value) {
-  if(!docTx.isNull()) {
-    if(docTx["timestamp"].isNull()) jsonPrint(timestamp);
-    else jsonPrint();
-    docTx.clear();
-  }
-  // JsonDocument docTx;
-  docTx["type"] = F("telemetry");
-  docTx["data"] = value;
-  docTx.shrinkToFit();
-  jsonPrint(timestamp);
-}
-
-void DebugJson::heartbeat(unsigned long timestamp) {
-  if(!docTx.isNull()) {
-    if(docTx["timestamp"].isNull()) jsonPrint(timestamp);
-    else jsonPrint();
-  } else {
+void DebugJson::heartbeat(unsigned long timestamp, Stream& out) {
+  // if(!docTx.isNull()) {
+    // if(docTx["timestamp"].isNull()) jsonPrint(timestamp, out);
+    // else {
+      // jsonPrint(out);
+    // }
+  // } else {
     // Empty document
     // JsonDocument docTx;
     docTx["type"] = F("heartbeat");
-    jsonPrint(timestamp);
-  }
+    docTx["timestamp"] = timestamp;
+    jsonPrintln(out);
+  // }
 }
+void DebugJson::heartbeat(Stream& out) { heartbeat(millis(), out); }
