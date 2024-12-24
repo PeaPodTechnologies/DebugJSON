@@ -1,3 +1,7 @@
+#ifndef UNIT_TEST
+#define UNIT_TEST 1
+#define IS_MAIN 1
+
 #include "DebugJson.h"
 
 using namespace DebugJson;
@@ -20,3 +24,5 @@ void loop() {
   r = !r;
   delay(2000);
 }
+
+#endif

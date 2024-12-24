@@ -116,7 +116,7 @@ namespace DebugJson {
   #define DEBUG_JSON(...)   DebugJsonOut.println(__VA_ARGS__)
   #define WARNING_JSON(...) DebugJsonWarning.println(__VA_ARGS__)
   #define ERROR_JSON(...)   DebugJsonError.println(__VA_ARGS__)
-  #define BP_JSON()         DebugJsonBreakpoints.println((String(__FILE__) + ':' + String(__LINE__)))
+  #define BP_JSON(...)      DebugJsonBreakpoints.println((String(__FILE__) + ':' + String(__LINE__)) __VA_OPT__(+ ' ' + String(__VA_ARGS__)))
 #endif
 
 #include "DebugJson.tpp"
