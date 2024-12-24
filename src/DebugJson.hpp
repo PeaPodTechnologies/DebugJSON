@@ -20,7 +20,8 @@
 #define DEBUG_JSON_POSTPRINT_MICROS 100 // 1ms - Uncomment to add a delay after printing
 // #define DEBUG_JSON_SRAM 1
 
-#define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_INFO
+// #define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_INFO
+#define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_NONE
 
 namespace DebugJson {
   typedef enum {
@@ -107,15 +108,15 @@ namespace DebugJson {
 
 
 #ifdef DEBUG_SERIAL
+  extern DebugJson::DebugStream<DebugJson::DEBUG_NONE> DebugJsonBreakpoints; // I.e. no error, breakpoints
   extern DebugJson::DebugStream<DebugJson::DEBUG_INFO> DebugJsonOut; // I.e. no error, breakpoints
   extern DebugJson::DebugStream<DebugJson::DEBUG_WARN> DebugJsonWarning; // I.e. software glitch
   extern DebugJson::DebugStream<DebugJson::DEBUG_ERROR> DebugJsonError; // I.e. hardware failure
   
-  #define DEBUG_JSON(...) DebugJsonOut.println(__VA_ARGS__)
-  // #define DEBUG_JSON(m, len)   DebugJson::debug(DebugJson::DEBUG_INFO, m, len)
+  #define DEBUG_JSON(...)   DebugJsonOut.println(__VA_ARGS__)
   #define WARNING_JSON(...) DebugJsonWarning.println(__VA_ARGS__)
   #define ERROR_JSON(...)   DebugJsonError.println(__VA_ARGS__)
-  #define BP_JSON()       DEBUG_JSON(String(__PRETTY_FUNCTION__) + ':' + String(__LINE__))
+  #define BP_JSON()         DebugJsonBreakpoints.println((String(__FILE__) + ':' + String(__LINE__)))
 #endif
 
 #include "DebugJson.tpp"

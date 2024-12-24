@@ -5,8 +5,7 @@ using namespace DebugJson;
 void setup() {
   Serial.begin(115200);
   while(!Serial);
-  DebugStream<DEBUG_INFO> out = DebugStream<DEBUG_INFO>(Serial);
-  out.println(F("Hello, world!"));
+  DEBUG_JSON("Hello, World!");
   delay(2000);
 }
 
