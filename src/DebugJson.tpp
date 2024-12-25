@@ -6,20 +6,21 @@
 #ifndef DEBUG_JSON_T_
 #define DEBUG_JSON_T_
 
-template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value, Stream& out) {
-  // if(!docTx.isNull()) {
-    // if(docTx["timestamp"].isNull()) jsonPrint(timestamp, out);
-    // else {
-      // jsonPrintln(out);
-    // }
+template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value, String key, Print& out) {
   JsonDocument docTx;
-  // }
-  // JsonDocument docTx;
-  docTx["type"] = F("telemetry");
+  // if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
+  docTx["type"] = parseType(EVENT_TELEMETRY);
+  docTx["data"][key] = value;
+  docTx["timestamp"] = timestamp;
+  jsonPrintln(docTx, out);
+}
+
+template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value, Print& out) {
+  JsonDocument docTx;
+  // if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
+  docTx["type"] = parseType(EVENT_TELEMETRY);
   docTx["data"] = value;
   docTx["timestamp"] = timestamp;
-  // docTx.shrinkToFit();
-  // jsonPrint(timestamp, out);
   jsonPrintln(docTx, out);
 }
 
@@ -31,7 +32,7 @@ template <DebugJson::msgtype_t T> size_t DebugJson::DebugPrint<T>::write(const u
   #endif
   if(size > 1 && buffer[size - 1] == '\n') {
     // This is a println() call; Send the document
-    return DebugJson::jsonPrintln(this->json, this->out);
+    return DebugJson::jsonPrintln(this->json, this->out); // Also clears the document
   }
   // debug(type, (const char*)buffer, size, out);
   // DebugJson::docTx.clear();

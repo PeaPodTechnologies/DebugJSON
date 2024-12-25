@@ -57,8 +57,9 @@ namespace DebugJson {
     void revision(const uint8_t& version, Print& out = DEBUG_SERIAL);
 
     // Looks for [key: string]: number
-    void telemetry(unsigned long timestamp, JsonObject data, Print& out = DEBUG_SERIAL);
-    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Print& out = DEBUG_SERIAL);
+    // void telemetry(JsonObject data, unsigned long timestamp, Print& out = DEBUG_SERIAL);
+    // void telemetry(JsonObject data, Print& out = DEBUG_SERIAL);
+    template <typename T> void telemetry(unsigned long timestamp, T value, String label, Print& out = DEBUG_SERIAL);
     template <typename T> void telemetry(unsigned long timestamp, T value, Print& out = DEBUG_SERIAL);
 
     void heartbeat(unsigned long timestamp, Print& out = DEBUG_SERIAL);
@@ -72,8 +73,9 @@ namespace DebugJson {
     void revision(const uint8_t& version, Print& out);
 
     // Looks for [key: string]: number
-    void telemetry(unsigned long timestamp, JsonObject data, Print& out);
-    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Print& out);
+    // void telemetry(JsonObject data, unsigned long timestamp, Print& out);
+    // void telemetry(JsonObject data, Print& out);
+    template <typename T> void telemetry(unsigned long timestamp, T value, String label, Print& out);
     template <typename T> void telemetry(unsigned long timestamp, T value, Print& out);
 
     void heartbeat(unsigned long timestamp, Print& out);

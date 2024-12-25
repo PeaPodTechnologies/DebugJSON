@@ -158,34 +158,22 @@ void DebugJson::revision(const uint8_t& version, Print& out) {
 }
 
 // Looks for [key: string]: number
-void DebugJson::telemetry(unsigned long timestamp, JsonObject data, Print& out) {
-  JsonDocument docTx;
-  docTx["type"] = parseType(EVENT_TELEMETRY);
-  docTx["data"] = data;
-  docTx["timestamp"] = timestamp;
-  // docTx.shrinkToFit();
-  jsonPrintln(docTx, out);
-}
+// void DebugJson::telemetry(JsonObject data, unsigned long timestamp, Print& out) {
+//   JsonDocument docTx;
+//   docTx["type"] = parseType(EVENT_TELEMETRY);
+//   docTx["data"] = data;
+//   docTx["timestamp"] = timestamp;
+//   // docTx.shrinkToFit();
+//   jsonPrintln(docTx, out);
+// }
 
-// template <typename T> unsigned DebugJson::telemetry(unsigned long timestamp, String key, T value, bool send) {
-//   if(docTx["type"] != String("telemetry")) {
-//     if(docTx["timestamp"].isNull()) jsonPrint(timestamp, docTx);
-//     else jsonPrint(docTx);
-
-//     docTx["type"] = "telemetry";
-//   }
-//   if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
-//     docTx["data"][key] = JsonArray();
-//     docTx["data"]["timestamps"][key] = JsonArray();
-//     docTx["data"]["count"][key] = 0;
-//   }
-//   unsigned count = docTx["data"]["count"][key];
-//   docTx["data"][key][count] = value;
-//   docTx["data"]["timestamps"][key][count] = docTx["data"]["timestamps"].isNull() ? JsonArray({ timestamp }) : timestamp; // Add timestamp
-//   count++;
-//   docTx["data"]["count"][key] = count;
-//   if(send) jsonPrint(docTx);
-//   return count;
+// void DebugJson::telemetry(JsonObject data, Print& out) {
+//   JsonDocument docTx;
+//   docTx["timestamp"] = millis();
+//   docTx["type"] = parseType(EVENT_TELEMETRY);
+//   docTx["data"] = data;
+//   // docTx.shrinkToFit();
+//   jsonPrintln(docTx, out);
 // }
 
 void DebugJson::heartbeat(unsigned long timestamp, Print& out) {
