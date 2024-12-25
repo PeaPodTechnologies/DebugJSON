@@ -8,19 +8,21 @@ unsigned long lastRx = 0;
 
 unsigned posBufferRx = 0;
 bool delimit = false; // TODO move to a class
-char DebugJson::bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-char DebugJson::bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+// char DebugJson::bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+// char DebugJson::bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
+char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 
 // char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 // char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-JsonDocument DebugJson::docTx;
-JsonDocument DebugJson::docRx;
+JsonDocument docRx;
+// JsonDocument DebugJson::docTx;
+// JsonDocument DebugJson::docRx;
 
 #ifdef DEBUG_SERIAL
-  DebugJson::DebugStream<DebugJson::DEBUG_NONE> DebugJsonBreakpoints(DEBUG_SERIAL);
-  DebugJson::DebugStream<DebugJson::DEBUG_INFO> DebugJsonOut(DEBUG_SERIAL); // I.e. non-error messages
-  DebugJson::DebugStream<DebugJson::DEBUG_WARN> DebugJsonWarning(DEBUG_SERIAL); // I.e. software glitch
-  DebugJson::DebugStream<DebugJson::DEBUG_ERROR> DebugJsonError(DEBUG_SERIAL); // I.e. hardware failure
+  DebugJson::DebugPrint<DebugJson::DEBUG_NONE> DebugJsonBreakpoints(DEBUG_SERIAL);
+  DebugJson::DebugPrint<DebugJson::DEBUG_INFO> DebugJsonOut(DEBUG_SERIAL); // I.e. non-error messages
+  DebugJson::DebugPrint<DebugJson::DEBUG_WARN> DebugJsonWarning(DEBUG_SERIAL); // I.e. software glitch
+  DebugJson::DebugPrint<DebugJson::DEBUG_ERROR> DebugJsonError(DEBUG_SERIAL); // I.e. hardware failure
 #endif
 
 // NOTE THE NAMING CONVENTIONS USED HERE
@@ -120,14 +122,14 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
   }
 }
 
-void DebugJson::fixedUpdate(unsigned long timestamp, Stream& serial) {
+void DebugJson::fixedUpdate(unsigned long timestamp, Print& out) {
   if((timestamp - lastTx) > DEBUG_JSON_HEARTBEAT) {
-    DebugJson::heartbeat(timestamp, serial);
+    DebugJson::heartbeat(timestamp, out);
   }
 }
 
-size_t DebugJson::jsonPrintln(Stream& out) {
-  size_t n = jsonPrint(out);
+size_t DebugJson::jsonPrintln(JsonDocument& docTx, Print& out) {
+  size_t n = jsonPrint(docTx, out);
   if(n == 0) {
     return 0; // Misfire
   }
@@ -136,7 +138,7 @@ size_t DebugJson::jsonPrintln(Stream& out) {
   return n+1;
 }
 
-size_t DebugJson::jsonPrint(Stream& out) {
+size_t DebugJson::jsonPrint(JsonDocument& docTx, Print& out) {
   size_t n = serializeJson(docTx, out);
   if(n == 0) {
     return 0; // Misfire
@@ -147,34 +149,22 @@ size_t DebugJson::jsonPrint(Stream& out) {
   return n;
 }
 
-void DebugJson::revision(const uint8_t& version, Stream& out) {
-  // if(!docTx.isNull()) {
-    // jsonPrintln(out);
-    docTx.clear();
-  // }
-  // JsonDocument docTx;
+void DebugJson::revision(const uint8_t& version, Print& out) {
+  JsonDocument docTx;
   docTx["type"] = parseType(EVENT_REVISION);
   docTx["data"] = version;
   // docTx.shrinkToFit();
-  jsonPrintln(out);
+  jsonPrintln(docTx, out);
 }
 
 // Looks for [key: string]: number
-void DebugJson::telemetry(unsigned long timestamp, JsonObject data, Stream& out) {
-  // if(!docTx.isNull()) {
-    // if(docTx["timestamp"].isNull()) jsonPrint(timestamp, out);
-    // else{ 
-      // jsonPrint(out);
-    // }
-    docTx.clear();
-  // }
-  // JsonDocument docTx;
+void DebugJson::telemetry(unsigned long timestamp, JsonObject data, Print& out) {
+  JsonDocument docTx;
   docTx["type"] = parseType(EVENT_TELEMETRY);
   docTx["data"] = data;
   docTx["timestamp"] = timestamp;
   // docTx.shrinkToFit();
-  // jsonPrint(timestamp, out);
-  jsonPrintln(out);
+  jsonPrintln(docTx, out);
 }
 
 // template <typename T> unsigned DebugJson::telemetry(unsigned long timestamp, String key, T value, bool send) {
@@ -198,18 +188,10 @@ void DebugJson::telemetry(unsigned long timestamp, JsonObject data, Stream& out)
 //   return count;
 // }
 
-void DebugJson::heartbeat(unsigned long timestamp, Stream& out) {
-  // if(!docTx.isNull()) {
-    // if(docTx["timestamp"].isNull()) jsonPrint(timestamp, out);
-    // else {
-      // jsonPrint(out);
-    // }
-  // } else {
-    // Empty document
-    // JsonDocument docTx;
-    docTx["type"] = F("heartbeat");
-    docTx["timestamp"] = timestamp;
-    jsonPrintln(out);
-  // }
+void DebugJson::heartbeat(unsigned long timestamp, Print& out) {
+  JsonDocument docTx;
+  docTx["type"] = F("heartbeat");
+  docTx["timestamp"] = timestamp;
+  jsonPrintln(docTx, out);
 }
-void DebugJson::heartbeat(Stream& out) { heartbeat(millis(), out); }
+void DebugJson::heartbeat(Print& out) { heartbeat(millis(), out); }

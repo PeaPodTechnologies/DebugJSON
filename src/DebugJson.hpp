@@ -14,6 +14,8 @@
 
 #define DEBUG_JSON_SIZE_DOC 128
 #define DEBUG_JSON_SIZE_BUFFER SERIAL_TX_BUFFER_SIZE
+#define DEBUG_JSON_SIZE_STRINGWRITER 256
+
 #define DEBUG_JSON_HEARTBEAT 5000
 #define DEBUG_JSON_REFRESH_MICROS 1000 // 1ms
 
@@ -22,6 +24,8 @@
 
 // #define DEBUG_JSON_MSG_SEP "; "
 #define DEBUG_JSON_MSG_SEP ""
+#define DEBUG_JSON_TELEMETRY_LABEL "data"
+#define DEBUG_JSON_TELEMETRY_UNITS "value"
 
 // #define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_INFO
 #define DEBUG_JSON_LEVEL_MIN DebugJson::DEBUG_NONE
@@ -39,41 +43,41 @@ namespace DebugJson {
   } msgtype_t;
 
   // Used during operations between all functions
-  extern char bufferTx[];
-  extern char bufferRx[];
-  extern JsonDocument docTx, docRx;
+  // extern char bufferTx[];
+  // extern char bufferRx[];
+  // extern JsonDocument docTx, docRx;
 
   const __FlashStringHelper* parseType(const msgtype_t& type);
 
   #ifdef DEBUG_SERIAL
 
-    size_t jsonPrint(Stream& out = DEBUG_SERIAL);
-    size_t jsonPrintln(Stream& out = DEBUG_SERIAL);
+    size_t jsonPrint(JsonDocument& json, Print& out = DEBUG_SERIAL);
+    size_t jsonPrintln(JsonDocument& json, Print& out = DEBUG_SERIAL);
 
-    void revision(const uint8_t& version, Stream& out = DEBUG_SERIAL);
+    void revision(const uint8_t& version, Print& out = DEBUG_SERIAL);
 
     // Looks for [key: string]: number
-    void telemetry(unsigned long timestamp, JsonObject data, Stream& out = DEBUG_SERIAL);
-    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Stream& out = DEBUG_SERIAL);
-    template <typename T> void telemetry(unsigned long timestamp, T value, Stream& out = DEBUG_SERIAL);
+    void telemetry(unsigned long timestamp, JsonObject data, Print& out = DEBUG_SERIAL);
+    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Print& out = DEBUG_SERIAL);
+    template <typename T> void telemetry(unsigned long timestamp, T value, Print& out = DEBUG_SERIAL);
 
-    void heartbeat(unsigned long timestamp, Stream& out = DEBUG_SERIAL);
-    void heartbeat(Stream& out = DEBUG_SERIAL);
+    void heartbeat(unsigned long timestamp, Print& out = DEBUG_SERIAL);
+    void heartbeat(Print& out = DEBUG_SERIAL);
   
   #else
 
-    size_t jsonPrint(Stream& out);
-    size_t jsonPrintln(Stream& out);
+    size_t jsonPrint(JsonDocument& json, Print& out);
+    size_t jsonPrintln(JsonDocument& json, Print& out);
 
-    void revision(const uint8_t& version, Stream& out);
+    void revision(const uint8_t& version, Print& out);
 
     // Looks for [key: string]: number
-    void telemetry(unsigned long timestamp, JsonObject data, Stream& out);
-    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Stream& out);
-    template <typename T> void telemetry(unsigned long timestamp, T value, Stream& out);
+    void telemetry(unsigned long timestamp, JsonObject data, Print& out);
+    template <typename T> void batchTelemetry(unsigned long timestamp, String key, T value, bool send, Print& out);
+    template <typename T> void telemetry(unsigned long timestamp, T value, Print& out);
 
-    void heartbeat(unsigned long timestamp, Stream& out);
-    void heartbeat(Stream& out);
+    void heartbeat(unsigned long timestamp, Print& out);
+    void heartbeat(Print& out);
   
   #endif
 
@@ -83,38 +87,82 @@ namespace DebugJson {
   #ifdef DEBUG_SERIAL
 
   void update(Stream& serial = DEBUG_SERIAL, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
-  void fixedUpdate(unsigned long timestamp, Stream& serial = DEBUG_SERIAL);
+  void fixedUpdate(unsigned long timestamp, Print& out = DEBUG_SERIAL);
 
   #else
 
-  void update(Stream& Serial, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
-  void fixedUpdate(unsigned long timestamp, Stream& Serial);
+  void update(Stream& serial, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
+  void fixedUpdate(unsigned long timestamp, Print& out);
 
   #endif
 
-  template <msgtype_t T> class DebugStream : public Stream {
+  class StringWriter : public Print {
     private:
-      const msgtype_t type = T;
-      Stream& out; // Wrapped
+      String s = String();
     public:
-      DebugStream(Stream& s) : out(s) {}
+      StringWriter(const String& s) : StringWriter() { print(s); }
+      StringWriter() : Print() {}
+      virtual ~StringWriter() {}
+      size_t write(uint8_t b) override { s += (char)b; return 1; }
+      int availableForWrite() override { return DEBUG_JSON_SIZE_STRINGWRITER - s.length(); } // Safe upper limit
+      void flush() override { s = String(); } // Reset
+      operator String() const { return s; } // Implicit copy-conversion
+  };
+
+  // Appends to ["msg"] and prints on newline
+  template <msgtype_t T> class DebugPrint : public Print {
+    protected:
+      JsonDocument json;
+      const msgtype_t type = T;
+      Print& out; // Wrapped
+    public:
+      DebugPrint(Print& s) : out(s) {}
+      virtual ~DebugPrint() { out.flush(); }
       size_t write(const uint8_t *buffer, size_t size) override;
       size_t write(uint8_t b) override { return out.write(b); } // Leave as-is (i.e. delineators)
       int availableForWrite() override { return out.availableForWrite(); } // Leave as-is
       void flush() override { out.flush(); } // Leave as-is
-      int available() { return out.available(); } // Leave as-is
-      int read() { return out.read(); } // Leave as-is
-      int peek() { return out.peek(); } // Leave as-is
+      // int available() { return out.available(); } // Leave as-is
+      // int read() { return out.read(); } // Leave as-is
+      // int peek() { return out.peek(); } // Leave as-is
   };
+
+  // Appends to ["msg"] and prints on newline
+  // The right way to serialize JS-ready batch data objects
+  // class TelemetryPrint : public DebugPrint<EVENT_TELEMETRY> {
+  //   private:
+  //     const String label, units;
+  //   public:
+  //     TelemetryPrint(Print& s, String label, String units = DEBUG_JSON_TELEMETRY_UNITS) : DebugPrint<EVENT_TELEMETRY>(s), label(label), units(units) { units.trim(); json[DEBUG_JSON_TELEMETRY_LABEL][label] = JsonArray(); }
+  //     template <typename T> bool setJson(JsonObject& obj, T value);
+  //     template <typename T> size_t write(const T* buffer, size_t size) {
+  //       bool r = true;
+  //       for(size_t i = 0; i < size; i++) {
+  //         JsonObject obj = json[DEBUG_JSON_TELEMETRY_LABEL][label].createNestedObject();
+  //         r &= obj[units].createNestedObject();
+  //         set<T>(buffer[i]);
+  //       }
+  //       return size;
+  //     }
+  // };
+
+  // class CommandRouter : public DebugPrint<EVENT_COMMAND>, public Stream {
+  //   private:
+  //     debugjson_cb_commands_t cb_commands;
+  //     debugjson_cb_config_t cb_config;
+  //   public:
+  //     CommandRouter(Stream& s, debugjson_cb_commands_t cb_commands) : DebugPrint<EVENT_COMMAND>(s), cb_commands(cb_commands), cb_config(cb_config) {}
+  //     size_t write(const uint8_t *buffer, size_t size) override;
+  // };
 
 };
 
 
 #ifdef DEBUG_SERIAL
-  extern DebugJson::DebugStream<DebugJson::DEBUG_NONE> DebugJsonBreakpoints; // I.e. no error, breakpoints
-  extern DebugJson::DebugStream<DebugJson::DEBUG_INFO> DebugJsonOut; // I.e. no error, breakpoints
-  extern DebugJson::DebugStream<DebugJson::DEBUG_WARN> DebugJsonWarning; // I.e. software glitch
-  extern DebugJson::DebugStream<DebugJson::DEBUG_ERROR> DebugJsonError; // I.e. hardware failure
+  extern DebugJson::DebugPrint<DebugJson::DEBUG_NONE> DebugJsonBreakpoints; // I.e. no error, breakpoints
+  extern DebugJson::DebugPrint<DebugJson::DEBUG_INFO> DebugJsonOut; // I.e. no error, breakpoints
+  extern DebugJson::DebugPrint<DebugJson::DEBUG_WARN> DebugJsonWarning; // I.e. software glitch
+  extern DebugJson::DebugPrint<DebugJson::DEBUG_ERROR> DebugJsonError; // I.e. hardware failure
   
   #define DEBUG_JSON(...)   DebugJsonOut.println(__VA_ARGS__)
   #define WARNING_JSON(...) DebugJsonWarning.println(__VA_ARGS__)

@@ -12,7 +12,7 @@ template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value
     // else {
       // jsonPrintln(out);
     // }
-    docTx.clear();
+  JsonDocument docTx;
   // }
   // JsonDocument docTx;
   docTx["type"] = F("telemetry");
@@ -20,10 +20,10 @@ template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value
   docTx["timestamp"] = timestamp;
   // docTx.shrinkToFit();
   // jsonPrint(timestamp, out);
-  jsonPrintln(out);
+  jsonPrintln(docTx, out);
 }
 
-template <DebugJson::msgtype_t T> size_t DebugJson::DebugStream<T>::write(const uint8_t *buffer, size_t size) {
+template <DebugJson::msgtype_t T> size_t DebugJson::DebugPrint<T>::write(const uint8_t *buffer, size_t size) {
   #ifdef DEBUG_JSON_LEVEL_MIN
   if(T < DEBUG_JSON_LEVEL_MIN) {
     return 0;
@@ -31,21 +31,21 @@ template <DebugJson::msgtype_t T> size_t DebugJson::DebugStream<T>::write(const 
   #endif
   if(size > 1 && buffer[size - 1] == '\n') {
     // This is a println() call; Send the document
-    return DebugJson::jsonPrintln(this->out);
+    return DebugJson::jsonPrintln(this->json, this->out);
   }
   // debug(type, (const char*)buffer, size, out);
   // DebugJson::docTx.clear();
 
   // OVERWRITE:
-  DebugJson::docTx["type"] = DebugJson::parseType(this->type);
-  DebugJson::docTx["timestamp"] = millis();
+  this->json["type"] = DebugJson::parseType(this->type);
+  this->json["timestamp"] = millis();
 
   // size = min(size, strlen((const char*)buffer));
   // String s; for(size_t i = 0; i < size; i++) { s += (char)buffer[i]; }
 
   // APPEND:
-  String s = DebugJson::docTx["msg"].isNull() ? "" : (DebugJson::docTx["msg"].as<String>() + DEBUG_JSON_MSG_SEP);
-  DebugJson::docTx["msg"] = s + String((const char*)buffer);
+  String s = (this->json["msg"].isNull() || this->json["msg"].as<String>().length() == 0) ? "" : (this->json["msg"].as<String>() + DEBUG_JSON_MSG_SEP);
+  this->json["msg"] = s + String((const char*)buffer);
 
   // docTx.shrinkToFit();
 
