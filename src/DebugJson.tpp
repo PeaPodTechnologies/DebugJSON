@@ -59,7 +59,10 @@ template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::wr
     json["timestamp"] = millis();
     json["msg"] = this->msg;
     return DebugJson::jsonPrintln(json, this->out, D); // Also clears the document
-    this->msg = ""; // Reset
+    
+    // Reset message
+    // this->msg = ""; This doesn't work?
+    this->msg.remove(0, this->msg.length());
   } else {
     // return s.length() - slen;
     return size;
