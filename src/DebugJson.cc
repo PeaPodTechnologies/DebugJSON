@@ -122,14 +122,14 @@ void DebugJson::fixedUpdate(unsigned long timestamp, Print& out) {
   }
 }
 
-size_t DebugJson::jsonPrintln(JsonDocument& docTx, Print& out) {
+size_t DebugJson::jsonPrintln(JsonDocument& docTx, Print& out, char delim) {
   size_t n = jsonPrint(docTx, out);
   if(n == 0) {
     return 0; // Misfire
   }
-  out.println();
+  n += out.print(delim);
   
-  return n+1;
+  return n;
 }
 
 size_t DebugJson::jsonPrint(JsonDocument& docTx, Print& out) {

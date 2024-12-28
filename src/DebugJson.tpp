@@ -24,33 +24,30 @@ template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value
   jsonPrintln(docTx, out);
 }
 
-template <DebugJson::msgtype_t T> size_t DebugJson::DebugPrint<T>::write(const uint8_t *buffer, size_t size) {
+template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::write(const uint8_t *buffer, size_t size) {
   #ifdef DEBUG_JSON_LEVEL_MIN
   if(T < DEBUG_JSON_LEVEL_MIN) {
     return 0;
   }
   #endif
-  if(size > 1 && buffer[size - 1] == '\n') {
+  bool print = false;
+  if(size == 0) return 0;
+  size_t slen = this->msg.length();
+  if(slen > 0) this->msg += DEBUG_JSON_MSG_SEP;
+  this->msg += (const char*)buffer;
+
+  if((char)buffer[size - 1] == D) {
+    this->msg.trim(); // Remove trailing whitespace
     // This is a println() call; Send the document
-    return DebugJson::jsonPrintln(this->json, this->out); // Also clears the document
+    JsonDocument json;
+    json["type"] = DebugJson::parseType(this->type);
+    json["timestamp"] = millis();
+    json["msg"] = this->msg;
+    return DebugJson::jsonPrintln(json, this->out); // Also clears the document
+  } else {
+    // return s.length() - slen;
+    return size;
   }
-  // debug(type, (const char*)buffer, size, out);
-  // DebugJson::docTx.clear();
-
-  // OVERWRITE:
-  this->json["type"] = DebugJson::parseType(this->type);
-  this->json["timestamp"] = millis();
-
-  // size = min(size, strlen((const char*)buffer));
-  // String s; for(size_t i = 0; i < size; i++) { s += (char)buffer[i]; }
-
-  // APPEND:
-  String s = (this->json["msg"].isNull() || this->json["msg"].as<String>().length() == 0) ? "" : (this->json["msg"].as<String>() + DEBUG_JSON_MSG_SEP);
-  this->json["msg"] = s + String((const char*)buffer);
-
-  // docTx.shrinkToFit();
-
-  return size; // NOT println; don't send anything
 }
 
 #endif

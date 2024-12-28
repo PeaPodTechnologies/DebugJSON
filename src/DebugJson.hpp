@@ -47,7 +47,7 @@ namespace DebugJson {
   #ifdef DEBUG_SERIAL
 
     size_t jsonPrint(JsonDocument& json, Print& out = DEBUG_SERIAL);
-    size_t jsonPrintln(JsonDocument& json, Print& out = DEBUG_SERIAL);
+    size_t jsonPrintln(JsonDocument& json, Print& out = DEBUG_SERIAL, char delim = '\n');
 
     void revision(const uint8_t& version, Print& out = DEBUG_SERIAL);
 
@@ -107,9 +107,9 @@ namespace DebugJson {
   };
 
   // Appends to ["msg"] and prints on newline
-  template <msgtype_t T> class DebugPrint : public Print {
+  template <msgtype_t T, char D = '\n'> class DebugPrint : public Print {
     protected:
-      JsonDocument json;
+      String msg = String();
       const msgtype_t type = T;
       Print& out; // Wrapped
     public:
