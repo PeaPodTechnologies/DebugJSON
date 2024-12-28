@@ -42,13 +42,6 @@ namespace DebugJson {
     EVENT_REVISION
   } msgtype_t;
 
-  JsonDocument docRx;
-
-  // Used during operations between all functions
-  // extern char bufferTx[];
-  // extern char bufferRx[];
-  // extern JsonDocument docTx, docRx;
-
   const __FlashStringHelper* parseType(const msgtype_t& type);
 
   #ifdef DEBUG_SERIAL

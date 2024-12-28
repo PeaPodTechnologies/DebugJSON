@@ -12,12 +12,6 @@ bool delimit = false; // TODO move to a class
 // char DebugJson::bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 
-// char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-// char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-// JsonDocument docRx;
-// JsonDocument DebugJson::docTx;
-// JsonDocument& DebugJson::docRx = new JsonDocument();
-
 #ifdef DEBUG_SERIAL
   DebugJson::DebugPrint<DebugJson::DEBUG_NONE> DebugJsonBreakpoints(DEBUG_SERIAL);
   DebugJson::DebugPrint<DebugJson::DEBUG_INFO> DebugJsonOut(DEBUG_SERIAL); // I.e. non-error messages
@@ -60,7 +54,7 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
       delimit = false;
       return;
     }
-    docRx.clear();
+    JsonDocument docRx;
     DeserializationError error = deserializeJson(docRx, bufferRx, posBufferRx);
 
     // unsigned i;
