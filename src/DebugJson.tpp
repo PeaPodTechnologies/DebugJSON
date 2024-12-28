@@ -51,18 +51,19 @@ template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::wr
   this->msg += (const char*)buffer;
 
   if(this->msg.indexOf(D) != -1) {
-    Serial.println("DEBUG PRINTLN");
     this->msg.trim(); // Remove trailing whitespace
     // This is a println() call; Send the document
     JsonDocument json;
     json["type"] = DebugJson::parseType(this->type);
     json["timestamp"] = millis();
     json["msg"] = this->msg;
-    return DebugJson::jsonPrintln(json, this->out, D); // Also clears the document
+    size_t r = DebugJson::jsonPrintln(json, this->out, D); // Also clears the document
     
     // Reset message
     // this->msg = ""; This doesn't work?
-    this->msg.remove(0, this->msg.length());
+    // this->msg.remove(0, this->msg.length());
+    this->msg.clear();
+    return r;
   } else {
     // return s.length() - slen;
     return size;
