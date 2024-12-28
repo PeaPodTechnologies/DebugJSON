@@ -14,9 +14,9 @@ char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 
 // char bufferTx[DEBUG_JSON_SIZE_DOC] = { '\0' };
 // char bufferRx[DEBUG_JSON_SIZE_DOC] = { '\0' };
-JsonDocument docRx;
+// JsonDocument docRx;
 // JsonDocument DebugJson::docTx;
-// JsonDocument DebugJson::docRx;
+// JsonDocument& DebugJson::docRx = new JsonDocument();
 
 #ifdef DEBUG_SERIAL
   DebugJson::DebugPrint<DebugJson::DEBUG_NONE> DebugJsonBreakpoints(DEBUG_SERIAL);

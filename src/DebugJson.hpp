@@ -42,6 +42,8 @@ namespace DebugJson {
     EVENT_REVISION
   } msgtype_t;
 
+  JsonDocument docRx;
+
   // Used during operations between all functions
   // extern char bufferTx[];
   // extern char bufferRx[];
