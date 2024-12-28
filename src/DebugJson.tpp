@@ -24,6 +24,20 @@ template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value
   jsonPrintln(docTx, out);
 }
 
+// const char* printWhitespace(char c) {
+//   switch(c) {
+//     case '\n': return "\\n";
+//     case '\r': return "\\r";
+//     case '\t': return "\\t";
+//     case '\v': return "\\v";
+//     case '\f': return "\\f";
+//     case '\b': return "\\b";
+//     case '\a': return "\\a";
+//     case '\0': return "\\0";
+//     default: return "";
+//   }
+// }
+
 template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::write(const uint8_t *buffer, size_t size) {
   #ifdef DEBUG_JSON_LEVEL_MIN
   if(T < DEBUG_JSON_LEVEL_MIN) {
@@ -36,7 +50,8 @@ template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::wr
   if(slen > 0) this->msg += DEBUG_JSON_MSG_SEP;
   this->msg += (const char*)buffer;
 
-  if((char)buffer[size - 1] == D) {
+  if(this->msg.indexOf(D) != -1) {
+    Serial.println("DEBUG PRINTLN");
     this->msg.trim(); // Remove trailing whitespace
     // This is a println() call; Send the document
     JsonDocument json;

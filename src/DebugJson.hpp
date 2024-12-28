@@ -116,7 +116,8 @@ namespace DebugJson {
       DebugPrint(Print& s) : out(s) {}
       virtual ~DebugPrint() { out.flush(); }
       size_t write(const uint8_t *buffer, size_t size) override;
-      size_t write(uint8_t b) override { return out.write(b); } // Leave as-is (i.e. delineators)
+      // size_t write(uint8_t b) override { return out.write(b); } // Leave as-is (i.e. delineators)
+      size_t write(uint8_t b) override { return write(&b, 1); } // Leave as-is (i.e. delineators)
       int availableForWrite() override { return out.availableForWrite(); } // Leave as-is
       void flush() override { out.flush(); } // Leave as-is
       // int available() { return out.available(); } // Leave as-is
