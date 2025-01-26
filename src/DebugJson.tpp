@@ -6,21 +6,27 @@
 #ifndef DEBUG_JSON_T_
 #define DEBUG_JSON_T_
 
-template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value, String key, Print& out) {
+template <typename S, const char* T> void DebugJson::telemetry(unsigned long timestamp, S value, String key, Print& out) {
   JsonDocument docTx;
   // if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
   docTx["type"] = parseType(EVENT_TELEMETRY);
-  docTx["data"][key] = value;
   docTx["timestamp"] = timestamp;
+  if(T != nullptr) {
+    docTx["t"] = T;
+  }
+  docTx["data"][key] = value;
   jsonPrintln(docTx, out);
 }
 
-template <typename T> void DebugJson::telemetry(unsigned long timestamp, T value, Print& out) {
+template <typename S, const char* T> void DebugJson::telemetry(unsigned long timestamp, S value, Print& out) {
   JsonDocument docTx;
   // if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
   docTx["type"] = parseType(EVENT_TELEMETRY);
-  docTx["data"] = value;
   docTx["timestamp"] = timestamp;
+  if(T != nullptr) {
+    docTx["t"] = T;
+  }
+  docTx["data"] = value;
   jsonPrintln(docTx, out);
 }
 
@@ -59,10 +65,7 @@ template <DebugJson::msgtype_t T, char D> size_t DebugJson::DebugPrint<T, D>::wr
     json["msg"] = this->msg;
     size_t r = DebugJson::jsonPrintln(json, this->out, D); // Also clears the document
     
-    // Reset message
-    // this->msg = ""; This doesn't work?
-    // this->msg.remove(0, this->msg.length());
-    this->msg.clear();
+    this->msg.clear(); // Clear string
     return r;
   } else {
     // return s.length() - slen;

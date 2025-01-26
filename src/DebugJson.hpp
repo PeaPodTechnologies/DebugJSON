@@ -54,8 +54,8 @@ namespace DebugJson {
     // Looks for [key: string]: number
     // void telemetry(JsonObject data, unsigned long timestamp, Print& out = DEBUG_SERIAL);
     // void telemetry(JsonObject data, Print& out = DEBUG_SERIAL);
-    template <typename T> void telemetry(unsigned long timestamp, T value, String label, Print& out = DEBUG_SERIAL);
-    template <typename T> void telemetry(unsigned long timestamp, T value, Print& out = DEBUG_SERIAL);
+    template <typename S, const char* T = nullptr> void telemetry(unsigned long timestamp, S value, String label, Print& out = DEBUG_SERIAL);
+    template <typename S, const char* T = nullptr> void telemetry(unsigned long timestamp, S value, Print& out = DEBUG_SERIAL);
 
     void heartbeat(unsigned long timestamp, Print& out = DEBUG_SERIAL);
     void heartbeat(Print& out = DEBUG_SERIAL);

@@ -146,7 +146,7 @@ size_t DebugJson::jsonPrint(JsonDocument& docTx, Print& out) {
 void DebugJson::revision(const uint8_t& version, Print& out) {
   JsonDocument docTx;
   docTx["type"] = parseType(EVENT_REVISION);
-  docTx["data"] = version;
+  docTx["data"]["revision"] = version;
   // docTx.shrinkToFit();
   jsonPrintln(docTx, out);
 }
