@@ -30,6 +30,18 @@ template <typename S, const char* T> void DebugJson::telemetry(unsigned long tim
   jsonPrintln(docTx, out);
 }
 
+template <const char* T> void DebugJson::telemetryJsonString(unsigned long timestamp, const char* value, Print& out) {
+  JsonDocument docTx;
+  // if(docTx["data"][key].isNull() || docTx["data"]["count"][key].isNull()) {
+  docTx["type"] = parseType(EVENT_TELEMETRY);
+  docTx["timestamp"] = timestamp;
+  if(T != nullptr) {
+    docTx["t"] = T;
+  }
+  DeserializationError err = deserializeJson(docTx["data"], value);
+  if(!err) jsonPrintln(docTx, out);
+}
+
 // const char* printWhitespace(char c) {
 //   switch(c) {
 //     case '\n': return "\\n";
