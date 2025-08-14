@@ -79,8 +79,8 @@ namespace DebugJson {
   
   #endif
 
-  typedef void (*debugjson_cb_config_t)(JsonObject config);
-  typedef void (*debugjson_cb_commands_t)(JsonObject commands);
+  typedef void (*debugjson_cb_config_t)(JsonObject config, Print& out);
+  typedef void (*debugjson_cb_commands_t)(JsonObject commands, Print& out);
 
   #ifdef DEBUG_SERIAL
 

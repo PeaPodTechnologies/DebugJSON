@@ -39,7 +39,15 @@ template <const char* T> void DebugJson::telemetryJsonString(unsigned long times
     docTx["t"] = T;
   }
   DeserializationError err = deserializeJson(docTx["data"], value);
-  if(!err) jsonPrintln(docTx, out);
+  if(!err) { jsonPrintln(docTx, out); }
+  else {
+    #ifdef DEBUG_SERIAL
+    DEBUG_SERIAL.print(F("DebugJson::telemetryJsonString('"));
+    DEBUG_SERIAL.print(value);
+    DEBUG_SERIAL.print(F("') deserializeJson failed: "));
+    DEBUG_SERIAL.println(err.c_str());
+    #endif
+  }
 }
 
 // const char* printWhitespace(char c) {

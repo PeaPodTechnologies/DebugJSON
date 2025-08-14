@@ -55,29 +55,18 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
       return;
     }
     JsonDocument docRx;
-    DeserializationError error = deserializeJson(docRx, bufferRx, posBufferRx);
-
-    // unsigned i;
-    // for(i = 0; i < DEBUG_JSON_SIZE_DOC && bufferRx[i + posBufferRx] != '\0'; i++) {
-    //   bufferRx[i] = bufferRx[i + posBufferRx];
-    // }
-
-    // bufferRx[i] = '\0';
-    // posBufferRx = 0;
-
-    // serial.println(docRx["type"].as<String>());
+    DeserializationError error = deserializeJson(docRx, bufferRx);
 
     if (error || docRx.isNull()) {
       // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Failed to parse JSON (")) + error.c_str() + ')');
       #ifdef DEBUG_SERIAL
         String s = F("DJ: Failed to parse JSON (");
         s += error.c_str();
-        s += ')';
+        s += ") '";
+        s += bufferRx;
         DebugJsonWarning.println(s);
       #endif
     } else {
-      delimit = false;
-      posBufferRx = 0;
       if(docRx["type"].isNull() || !docRx["type"].is<String>() || docRx["type"].as<String>().length() == 0) {
         // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: Invalid JSON (ENOENT 'type')")));
         #ifdef DEBUG_SERIAL
@@ -89,18 +78,22 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
         if(type == String("command")) {
           // TODO: Command validation
           JsonObject data = docRx["data"];
-          if(cb_commands != nullptr) cb_commands(data);
+          if(cb_commands != nullptr) cb_commands(data, serial);
           // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Commands'")));
           #ifdef DEBUG_SERIAL
-            DebugJsonWarning.println(F("DJ: No Callback 'Commands'"));
+            else {
+              DebugJsonWarning.println(F("DJ: No Callback 'Commands'"));
+            }
           #endif
         } else if (type == String("config")) {
           // TODO: Config validation
           JsonObject data = docRx["data"];
-          if(cb_config != nullptr) cb_config(data);
+          if(cb_config != nullptr) cb_config(data, serial);
           // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Configuration'")));
           #ifdef DEBUG_SERIAL
-            DebugJsonWarning.println(F("DJ: No Callback 'Configuration'"));
+            else {
+              DebugJsonWarning.println(F("DJ: No Callback 'Configuration'"));
+            }
           #endif
         } else {
           // DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback '")) + String(type) + '\'');
@@ -112,6 +105,13 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
           #endif
         }
       }
+    }
+
+    // Clear the buffer
+    delimit = false;
+    posBufferRx = 0;
+    for(unsigned i = 0; i < DEBUG_JSON_SIZE_DOC; i++) {
+      bufferRx[i] = '\0';
     }
   }
 }
@@ -146,6 +146,7 @@ size_t DebugJson::jsonPrint(JsonDocument& docTx, Print& out) {
 void DebugJson::revision(const uint8_t& version, Print& out) {
   JsonDocument docTx;
   docTx["type"] = parseType(EVENT_REVISION);
+  docTx["timestamp"] = millis();
   docTx["data"]["revision"] = version;
   // docTx.shrinkToFit();
   jsonPrintln(docTx, out);
