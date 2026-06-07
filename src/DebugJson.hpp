@@ -6,9 +6,10 @@
 
 #ifndef DEBUG_SERIAL
 // #ifdef HAVE_HWSERIAL0
-#define DEBUG_SERIAL Serial
+// #define DEBUG_SERIAL Serial
+// #define DEBUG_SERIAL Serial1
 // #else
-// #error DEBUG_SERIAL is not defined
+#error DEBUG_SERIAL is not defined
 // #endif
 #endif
 
