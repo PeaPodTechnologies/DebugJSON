@@ -7,7 +7,7 @@
 #ifndef DEBUG_SERIAL
 // #ifdef HAVE_HWSERIAL0
 // #define DEBUG_SERIAL Serial
-#define DEBUG_SERIAL Serial1 // Hardcoded for now, matches Adafruit Feather ESP32 V2 GPIO UART
+#define DEBUG_SERIAL Serial // Hardcoded for now, matches Adafruit Feather ESP32 V2 USB UART
 // #else
 // #error DEBUG_SERIAL is not defined
 // #endif
