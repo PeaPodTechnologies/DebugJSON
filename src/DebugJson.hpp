@@ -40,6 +40,8 @@ namespace DebugJson {
     EVENT_TELEMETRY,
     EVENT_COMMAND,
     EVENT_CONFIGURATION,
+    EVENT_INTERVAL,
+    EVENT_EVENT,
     EVENT_REVISION
   } msgtype_t;
 

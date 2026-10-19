@@ -25,9 +25,11 @@ const __FlashStringHelper* DebugJson::parseType(const DebugJson::msgtype_t& type
     case DebugJson::DEBUG_INFO: return F("debug");
     case DebugJson::DEBUG_WARN: return F("error");
     case DebugJson::DEBUG_ERROR: return F("fatal");
-    case DebugJson::EVENT_TELEMETRY: return F("event");
+    case DebugJson::EVENT_TELEMETRY: return F("telemetry");
     case DebugJson::EVENT_COMMAND: return F("command");
     case DebugJson::EVENT_CONFIGURATION: return F("config");
+    case DebugJson::EVENT_INTERVAL: return F("interval");
+    case DebugJson::EVENT_EVENT: return F("event");
     case DebugJson::EVENT_REVISION: return F("revision");
     default: return F("info");
   }
