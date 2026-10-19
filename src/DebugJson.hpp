@@ -84,15 +84,17 @@ namespace DebugJson {
 
   typedef void (*debugjson_cb_config_t)(JsonObject config, Print& out);
   typedef void (*debugjson_cb_commands_t)(JsonObject commands, Print& out);
+  typedef void (*debugjson_cb_intervals_t)(JsonObject intervals, Print& out);
+  typedef void (*debugjson_cb_events_t)(JsonObject events, Print& out);
 
   #ifdef DEBUG_SERIAL
 
-  void update(Stream& serial = DEBUG_SERIAL, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
+  void update(Stream& serial = DEBUG_SERIAL, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr, debugjson_cb_intervals_t cb_intervals = nullptr, debugjson_cb_events_t cb_events = nullptr);
   void fixedUpdate(unsigned long timestamp, Print& out = DEBUG_SERIAL);
 
   #else
 
-  void update(Stream& serial, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr);
+  void update(Stream& serial, debugjson_cb_commands_t cb_commands = nullptr, debugjson_cb_config_t cb_config = nullptr, debugjson_cb_intervals_t cb_intervals = nullptr, debugjson_cb_events_t cb_events = nullptr);
   void fixedUpdate(unsigned long timestamp, Print& out);
 
   #endif

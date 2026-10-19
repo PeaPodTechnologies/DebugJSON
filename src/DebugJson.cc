@@ -36,7 +36,7 @@ const __FlashStringHelper* DebugJson::parseType(const DebugJson::msgtype_t& type
   return nullptr;
 }
 
-void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config) {
+void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debugjson_cb_config_t cb_config, debugjson_cb_intervals_t cb_intervals, debugjson_cb_events_t cb_events) {
   // Read to async global buffer
   while(serial.available() > 0) {
     char c = serial.read();
@@ -95,6 +95,26 @@ void DebugJson::update(Stream& serial, debugjson_cb_commands_t cb_commands, debu
           #ifdef DEBUG_SERIAL
             else {
               DebugJsonWarning.println(F("DJ: No Callback 'Configuration'"));
+            }
+          #endif
+        } else if (type == String("interval")) {
+          // TODO: Interval validation
+          JsonObject data = docRx["data"];
+          if(cb_intervals != nullptr) cb_intervals(data, serial);
+          // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Intervals'")));
+          #ifdef DEBUG_SERIAL
+            else {
+              DebugJsonWarning.println(F("DJ: No Callback 'Intervals'"));
+            }
+          #endif
+        } else if (type == String("event")) {
+          // TODO: Event validation
+          JsonObject data = docRx["data"];
+          if(cb_events != nullptr) cb_events(data, serial);
+          // else DebugJson::debug(DebugJson::DEBUG_WARN, String(F("DJ: No Callback 'Events'")));
+          #ifdef DEBUG_SERIAL
+            else {
+              DebugJsonWarning.println(F("DJ: No Callback 'Events'"));
             }
           #endif
         } else {
